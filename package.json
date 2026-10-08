@@ -1,0 +1,9 @@
+{
+  "name": "eisstock-rangliste",
+  "private": true,
+  "description": "Eisstock-Rangliste mit Literwertung (GitHub Pages + Supabase)",
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes serve@14.2.4 public"
+  }
+}
