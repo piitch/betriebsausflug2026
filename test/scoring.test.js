@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { kehrePoints, gameScore, sportRanking, literRanking, overallRanking } = require('../public/js/scoring.js');
+const { kehrePoints, gameScore, sportRanking, literRanking, overallRanking, rankings } = require('../public/js/scoring.js');
 const { roundRobin } = require('../public/js/schedule.js');
 
 const team = (id) => ({ id, name: 'Team ' + id });
@@ -102,3 +102,20 @@ for (const n of [2, 3, 4, 5, 6, 7, 8]) {
     assert.equal(rounds.size, n % 2 ? n : n - 1);
   });
 }
+
+test('Am Start: keine Wertung aktiv, alle haben 0', () => {
+  const state = { teams: [team('A'), team('B')], players: [player('a1', 'A')], games: [{ teamA: 'A', teamB: 'B', done: false, kehren: [] }], drinks: [] };
+  const r = rankings(state);
+  assert.deepEqual(r.active, { sport: false, liter: false });
+  assert.deepEqual(r.overall.map((x) => x.sum), [0, 0]);
+});
+
+test('Gesamt zählt nur aktive Wertungen', () => {
+  const state = {
+    teams: [team('A'), team('B')], players: [player('a1', 'A'), player('b1', 'B')],
+    games: [], drinks: [{ personId: 'b1', liters: 0.5 }],
+  };
+  const r = rankings(state);
+  assert.deepEqual(r.active, { sport: false, liter: true });
+  assert.deepEqual(r.overall.map((x) => [x.teamId, x.sum, x.place]), [['B', 1, 1], ['A', 2, 2]]);
+});

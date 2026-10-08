@@ -108,15 +108,16 @@
   }
 
   // Gesamtwertung: Platzziffer = Platz Sport + Platz Liter (kleiner ist besser).
-  // Bei Gleichstand entscheidet der Sportplatz.
-  function overallRanking(sport, liter) {
+  // Es zählen nur Wertungen, in denen schon etwas passiert ist (active); am Anfang
+  // haben also alle 0. Bei Gleichstand entscheidet der Sportplatz.
+  function overallRanking(sport, liter, active = { sport: true, liter: true }) {
     const literPlace = new Map(liter.teams.map((t) => [t.teamId, t.place]));
     const list = sport.map((s) => ({
       teamId: s.teamId, name: s.name,
       sportPlace: s.place, literPlace: literPlace.get(s.teamId),
-      sum: s.place + literPlace.get(s.teamId),
+      sum: (active.sport ? s.place : 0) + (active.liter ? literPlace.get(s.teamId) : 0),
     }));
-    const cmp = (x, y) => (x.sum - y.sum) || (x.sportPlace - y.sportPlace);
+    const cmp = (x, y) => (x.sum - y.sum) || (active.sport ? x.sportPlace - y.sportPlace : 0);
     list.sort((x, y) => cmp(x, y) || x.name.localeCompare(y.name));
     return assignPlaces(list, cmp);
   }
@@ -124,7 +125,9 @@
   function rankings(state) {
     const sport = sportRanking(state);
     const liter = literRanking(state);
-    return { sport, liter, overall: overallRanking(sport, liter) };
+    // Ohne beendetes Spiel bzw. ohne Liter gibt es in der Wertung noch keine Plätze.
+    const active = { sport: state.games.some((g) => g.done), liter: liter.teams.some((t) => t.liters > 0) };
+    return { sport, liter, overall: overallRanking(sport, liter, active), active };
   }
 
   return { kehrePoints, gameScore, sportRanking, literRanking, overallRanking, rankings };

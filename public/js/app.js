@@ -37,6 +37,8 @@
   const fmtTime = (iso) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   const fmtNote = (r) => (r.stocknote === null ? '∞' : r.stocknote.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }));
   const medal = (p) => ({ 1: '🥇', 2: '🥈', 3: '🥉' }[p] || p + '.');
+  // Solange in einer Wertung noch nichts passiert ist, gibt es keine Plätze.
+  const place = (p, active) => (active ? medal(p) : '<span class="muted">–</span>');
   const team = (id) => S.data.teams.find((t) => t.id === id);
   const teamName = (id) => (team(id) || { name: '?' }).name;
   const player = (id) => S.data.players.find((p) => p.id === id);
@@ -212,7 +214,7 @@
       html += `<div class="card"><table class="rank">
         <tr><th class="pl">Pl.</th><th class="l">Mannschaft</th><th>Sp</th><th>Pkt</th><th>Note</th><th>Stock</th></tr>
         ${r.sport.map((x) => `<tr>
-          <td class="pl"><span class="medal">${medal(x.place)}</span></td>
+          <td class="pl"><span class="medal">${place(x.place, r.active.sport)}</span></td>
           <td class="l name">${swatch(x.teamId)}${esc(x.name)}<div class="small muted">${x.won}S ${x.draw}U ${x.lost}N</div></td>
           <td>${x.games}</td><td class="big">${x.points}</td><td>${fmtNote(x)}</td>
           <td class="small">${x.plus}:${x.minus}</td></tr>`).join('')}
@@ -223,7 +225,7 @@
       html += `<div class="card"><table class="rank">
         <tr><th class="pl">Pl.</th><th class="l">Mannschaft</th><th>Liter</th><th>Ø/Kopf</th></tr>
         ${r.liter.teams.map((x) => `<tr>
-          <td class="pl"><span class="medal">${medal(x.place)}</span></td>
+          <td class="pl"><span class="medal">${place(x.place, r.active.liter)}</span></td>
           <td class="l name">${swatch(x.teamId)}${esc(x.name)}</td>
           <td class="big">${fmtL(x.liters)}</td><td>${fmtL(x.perHead)}</td></tr>`).join('')}
       </table></div>
@@ -239,9 +241,10 @@
       html += `<div class="card"><table class="rank">
         <tr><th class="pl">Pl.</th><th class="l">Mannschaft</th><th>Sport</th><th>Liter</th><th>Summe</th></tr>
         ${r.overall.map((x) => `<tr>
-          <td class="pl"><span class="medal">${medal(x.place)}</span></td>
+          <td class="pl"><span class="medal">${place(x.place, r.active.sport || r.active.liter)}</span></td>
           <td class="l name">${swatch(x.teamId)}${esc(x.name)}</td>
-          <td>${x.sportPlace}.</td><td>${x.literPlace}.</td><td class="big">${x.sum}</td></tr>`).join('')}
+          <td>${r.active.sport ? x.sportPlace + '.' : '–'}</td><td>${r.active.liter ? x.literPlace + '.' : '–'}</td>
+          <td class="big">${x.sum}</td></tr>`).join('')}
       </table></div>
       <p class="small muted">Gesamtwertung: Platz Sport + Platz Liter. Die kleinste Summe gewinnt,
         bei Gleichstand zählt der bessere Sportplatz.</p>`;
