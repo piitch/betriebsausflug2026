@@ -4,7 +4,8 @@ const assert = require('node:assert/strict');
 const { kehrePoints, gameScore, sportRanking, literRanking, overallRanking } = require('../public/js/scoring.js');
 const { roundRobin } = require('../public/js/schedule.js');
 
-const team = (id, members = []) => ({ id, name: 'Team ' + id, members: members.map((m) => ({ id: m, name: m })) });
+const team = (id) => ({ id, name: 'Team ' + id });
+const player = (id, teamId) => ({ id, name: id, teamId });
 const k = (team, stocks) => ({ team, stocks });
 
 test('Kehre: 3 Punkte für den besten Stock, +2 für jeden weiteren', () => {
@@ -58,20 +59,23 @@ test('Stocknote ohne Gegenpunkte ist unendlich (null) und schlägt alles', () =>
   assert.equal(r[0].stocknote, null);
 });
 
-test('Literwertung: Team-Summe, Ø pro Kopf, Einzelwertung', () => {
+test('Literwertung: Team-Summe, Ø pro Kopf, Einzelwertung, Personen ohne Team', () => {
   const state = {
-    teams: [team('A', ['a1', 'a2']), team('B', ['b1'])],
+    teams: [team('A'), team('B')],
+    players: [player('a1', 'A'), player('a2', 'A'), player('b1', 'B'), player('solo', null)],
     games: [],
     drinks: [
       { personId: 'a1', liters: 0.5 }, { personId: 'a1', liters: 0.5 },
-      { personId: 'a2', liters: 0.3 }, { personId: 'b1', liters: 1 },
+      { personId: 'a2', liters: 0.3 }, { personId: 'b1', liters: 1 }, { personId: 'solo', liters: 0.5 },
       { personId: 'gelöscht', liters: 5 },
     ],
   };
   const r = literRanking(state);
   assert.deepEqual(r.teams.map((t) => [t.teamId, t.liters, t.perHead, t.place]), [['A', 1.3, 0.65, 1], ['B', 1, 1, 2]]);
-  assert.deepEqual(r.people.map((p) => [p.personId, p.liters, p.place]), [['a1', 1, 1], ['b1', 1, 1], ['a2', 0.3, 3]]);
-  assert.equal(r.total, 2.3);
+  assert.deepEqual(r.people.map((p) => [p.personId, p.liters, p.place]),
+    [['a1', 1, 1], ['b1', 1, 1], ['solo', 0.5, 3], ['a2', 0.3, 4]]);
+  assert.equal(r.people.find((p) => p.personId === 'solo').teamId, null, 'ohne Mannschaft');
+  assert.equal(r.total, 2.8);
 });
 
 test('Gesamtwertung: Platzsumme, Gleichstand -> besserer Sportplatz', () => {

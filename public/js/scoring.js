@@ -80,18 +80,20 @@
     for (const d of state.drinks) {
       perPerson.set(d.personId, (perPerson.get(d.personId) || 0) + d.liters);
     }
-    const people = [];
+    const teamNames = new Map(state.teams.map((t) => [t.id, t.name]));
+    // Personen ohne Mannschaft zählen in der Einzelwertung, aber für kein Team.
+    const people = (state.players || []).map((p) => ({
+      personId: p.id, name: p.name,
+      teamId: teamNames.has(p.teamId) ? p.teamId : null,
+      team: teamNames.get(p.teamId) || '',
+      liters: round2(perPerson.get(p.id) || 0),
+    }));
     const teams = state.teams.map((t) => {
-      let liters = 0;
-      for (const m of t.members) {
-        const l = perPerson.get(m.id) || 0;
-        liters += l;
-        people.push({ personId: m.id, name: m.name, team: t.name, teamId: t.id, liters: round2(l) });
-      }
-      const size = t.members.length;
+      const members = people.filter((p) => p.teamId === t.id);
+      const liters = members.reduce((sum, p) => sum + (perPerson.get(p.personId) || 0), 0);
       return {
-        teamId: t.id, name: t.name, members: size,
-        liters: round2(liters), perHead: size ? round2(liters / size) : 0,
+        teamId: t.id, name: t.name, members: members.length,
+        liters: round2(liters), perHead: members.length ? round2(liters / members.length) : 0,
       };
     });
     const teamCmp = (x, y) => (y.liters - x.liters) || (y.perHead - x.perHead);
@@ -101,7 +103,7 @@
     return {
       teams: assignPlaces(teams, teamCmp),
       people: assignPlaces(people, personCmp),
-      total: round2(teams.reduce((s, t) => s + t.liters, 0)),
+      total: round2(people.reduce((sum, p) => sum + p.liters, 0)),
     };
   }
 

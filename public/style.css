@@ -216,3 +216,16 @@ table.rank .big { font-weight: 700; font-size: 17px; }
 .rules ul { padding-left: 20px; margin: 6px 0; }
 .rules table { border-collapse: collapse; margin: 6px 0; }
 .rules td, .rules th { border: 1px solid var(--line); padding: 4px 10px; text-align: center; }
+
+/* Rollen / Konto */
+label.check { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+label.check input { width: 22px; height: 22px; }
+.prow { display: grid; grid-template-columns: 1fr minmax(90px, 38%) auto auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.prow input, .prow select { min-width: 0; }
+.prow .reg { width: 20px; text-align: center; }
+.mycard { border: 2px solid var(--primary); }
+.mycard .big { font-size: 22px; font-weight: 800; }
+.person.me .who b, tr.me .name { color: var(--primary); }
+.person.me .who b::after { content: " (du)"; font-weight: 400; color: var(--muted); }
+details.card > summary { cursor: pointer; }
+code { font-size: 13px; background: var(--chip); padding: 1px 5px; border-radius: 5px; }

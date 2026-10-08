@@ -4,8 +4,27 @@ Web-App fürs Handy: Spielplan, Ergebniserfassung pro Kehre, Rangliste **und Lit
 Läuft kostenlos auf **GitHub Pages**, die Daten liegen in einer kostenlosen **Supabase**-Datenbank.
 Alle Handys sehen dieselben Daten, live (Aktualisierung alle 4 Sekunden).
 
-- **Anschauen** kann jeder mit dem Link.
-- **Eintragen** (Ergebnisse, Liter, Setup) geht nur mit der **Schreib-PIN**. Die PIN wird in der Datenbank geprüft, nicht im Browser.
+## Rollen
+
+| Rolle | Zugang | Darf |
+|---|---|---|
+| **Zuschauer** | nur der Link | Ranglisten, Spiele und Liter ansehen |
+| **Teilnehmer** | registriert sich selbst mit dem **Teilnehmer-Code** | **nur eigene** Liter eintragen, mit Regeln (siehe unten) |
+| **Bar** | **Bar-Code** | Liter für **alle** eintragen und löschen, ohne Limits |
+| **Admin** | **Admin-Code** | alles: Mannschaften, Personen, Spielplan, Ergebnisse, Einstellungen |
+
+Alle Rechte werden **in der Datenbank** geprüft, nicht nur in der App. Wer die Seite manipuliert, kommt trotzdem nicht weiter.
+
+**Regeln fürs Selbst-Eintragen** (vom Admin im Setup einstellbar):
+- höchstens **1 l pro Eintrag**
+- mindestens **10 Minuten** zwischen zwei Einträgen. Auch Einträge der Bar zählen, damit nichts doppelt eingetragen wird.
+- maximal **1,5 l pro Stunde** (gleitend über 60 Minuten)
+- Rückgängig nur für **eigene Einträge der letzten 5 Minuten**, alles andere korrigiert die Bar
+- Der Admin kann das Selbst-Eintragen jederzeit **sperren** und die Registrierung **schließen**.
+- Bei jedem Eintrag steht, wer ihn gemacht hat: 👤 selbst, 🍺 Bar, ⚙️ Admin.
+
+**Registrierung:** Teilnehmer wählen eine der vom Admin angelegten Mannschaften und dann ihren Namen aus der Liste. Wer nicht in der Liste steht, trägt seinen Namen ein. Ein bereits registrierter Name ist für andere gesperrt.
+**Neues Handy oder versehentlich abgemeldet?** Der Admin tippt bei der Person auf ↺ (Login zurücksetzen), danach kann sie sich neu registrieren. Ihre Liter bleiben erhalten.
 
 ## Wie wird gewertet?
 
@@ -26,12 +45,16 @@ Am Handy wird pro Kehre nur getippt: *welche Mannschaft* → *wie viele Stöcke*
 
 1. Auf [supabase.com](https://supabase.com) kostenlos registrieren → **New project** (Region z. B. Frankfurt).
 2. Links **SQL Editor** öffnen. Den kompletten Inhalt von [`supabase/setup.sql`](supabase/setup.sql) einfügen.
-3. **Ganz oben die PIN ändern** (`'bitte-aendern'` → eure PIN, am besten 6 Zeichen oder mehr) → **Run**.
+3. **Ganz oben die drei Codes ändern** → **Run**:
+   - `admin_code`: geheim, mindestens 8 Zeichen
+   - `bar_code`: nur für das Bar-Personal, mindestens 8 Zeichen
+   - `user_code`: bekommen alle Teilnehmer (z. B. auf dem Aushang mit dem QR-Code)
 4. Unter **Project Settings → API** (bzw. *API Keys*) notieren:
    - **Project URL**, z. B. `https://abcdefgh.supabase.co`
    - **Publishable key** bzw. **anon public key**. Dieser Schlüssel darf öffentlich sein, weil Schreiben nur mit PIN geht.
 
-> PIN später ändern: In `setup.sql` die PIN anpassen und erneut ausführen. Vorhandene Daten bleiben erhalten.
+> Codes später ändern oder auf eine neue Version aktualisieren: `setup.sql` (mit euren Codes) erneut ausführen. Vorhandene Daten bleiben erhalten.
+> **Wichtig:** Die eigenen Codes nicht ins Repository committen, es ist öffentlich.
 
 ### 2. GitHub Pages aktivieren
 
@@ -47,10 +70,11 @@ Am Handy wird pro Kehre nur getippt: *welche Mannschaft* → *wie viele Stöcke*
 ### 3. Am Tag selbst
 
 1. Link (am besten als QR-Code) an alle verteilen. Am Handy über *Teilen → Zum Home-Bildschirm* wie eine App nutzen.
-2. **Setup** → PIN eingeben → Mannschaften und Mitspieler anlegen → **Spielplan erstellen**.
-3. Pro Bahn trägt eine Person mit PIN die Kehren ein → **Spiel beenden & werten**.
-4. Die Liter trägt, wer die PIN hat, unter **Liter** ein. Ein Tippfehler lässt sich über „Rückgängig“ oder „Löschen“ korrigieren.
-5. Die Rangliste kann parallel auf einem Beamer oder Fernseher laufen.
+2. Admin: **Anmelden** → Admin-Code → Mannschaften und (optional) Personen anlegen → **Spielplan erstellen**.
+3. Teilnehmer: **Anmelden** → Teilnehmer-Code → Mannschaft und Namen wählen → unter **Liter** selbst eintragen.
+4. Bar: **Anmelden** → Bar-Code → unter **Liter** für alle eintragen oder korrigieren.
+5. Der Admin trägt die Kehren ein → **Spiel beenden & werten**.
+6. Die Rangliste kann parallel auf einem Beamer oder Fernseher laufen.
 
 ⚠️ **Supabase pausiert kostenlose Projekte nach 7 Tagen ohne Zugriff.** Ein paar Tage vorher die App einmal öffnen oder das Projekt im Supabase-Dashboard mit „Restore“ wieder aufwecken.
 
