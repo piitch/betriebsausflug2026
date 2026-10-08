@@ -28,7 +28,7 @@ alter table settings add column if not exists registration_open boolean not null
 alter table settings add column if not exists self_entry boolean not null default true;
 alter table settings add column if not exists user_min_gap int not null default 10;
 alter table settings add column if not exists user_max_per_hour numeric(4, 2) not null default 1.5;
-alter table settings add column if not exists user_max_entry numeric(4, 2) not null default 1.0;
+alter table settings add column if not exists user_max_entry numeric(4, 2) not null default 0.5;
 insert into settings (id) values (1) on conflict do nothing;
 
 create table if not exists secrets (id int primary key default 1 check (id = 1));

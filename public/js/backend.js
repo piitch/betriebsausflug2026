@@ -6,7 +6,7 @@
 
   const DEFAULT_SETTINGS = {
     title: 'Eurofun Touristik Betriebsausflug 2026', kehren: 6, stocks: 4,
-    registrationOpen: true, selfEntry: true, userMinGap: 10, userMaxPerHour: 1.5, userMaxEntry: 1,
+    registrationOpen: true, selfEntry: true, userMinGap: 10, userMaxPerHour: 1.5, userMaxEntry: 0.5,
   };
 
   function uuid() {

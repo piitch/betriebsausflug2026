@@ -6,7 +6,7 @@
   const UNDO_MINUTES = 5; // muss zu delete_drink in supabase/setup.sql passen
   const LS = { auth: 'eisstock.auth', conn: 'eisstock.connection', local: 'eisstock.localdata', rank: 'eisstock.ranktab' };
   const COLORS = ['#d33a2c', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#17becf', '#e377c2', '#8c564b', '#bcbd22', '#7f7f7f'];
-  const DRINKS = [0.3, 0.5, 1];
+  const DRINKS = [0.33, 0.5]; // Flaschen bzw. Halbe – mehr gibt es nicht
   const SOURCE = { user: '👤', bar: '🍺', admin: '⚙️' };
   const SOURCE_TITLE = { user: 'selbst eingetragen', bar: 'von der Bar', admin: 'vom Admin' };
 
@@ -422,8 +422,7 @@
         <span class="small muted">${tl === null ? '' : fmtL(tl) + ' l'}</span></div>`;
       for (const m of members) {
         html += `<div class="person ${m.id === myId() ? 'me' : ''}"><div class="who"><b>${esc(m.name)}</b><span>${fmtL(byPerson.get(m.id))} l</span></div>
-          ${canBar() ? DRINKS.map((l) => `<button class="btn add" data-act="drink" data-p="${esc(m.id)}" data-l="${l}">+${fmtL(l)}</button>`).join('') +
-            `<button class="btn add" data-act="drink-custom" data-p="${esc(m.id)}" title="Andere Menge">…</button>` : ''}
+          ${canBar() ? DRINKS.map((l) => `<button class="btn add" data-act="drink" data-p="${esc(m.id)}" data-l="${l}">+${fmtL(l)}</button>`).join('') : ''}
         </div>`;
       }
       html += '</div>';
@@ -535,8 +534,9 @@
       <label class="field"><span>Titel</span><input type="text" id="set-title" value="${esc(st.title)}"></label>
       <div class="row">
         <label class="field grow"><span>Kehren pro Spiel</span><input type="number" id="set-kehren" min="1" max="12" value="${st.kehren}"></label>
-        <label class="field grow"><span>Stöcke pro Mannschaft</span><input type="number" id="set-stocks" min="1" max="8" value="${st.stocks}"></label>
+        <label class="field grow"><span>Schützen pro Kehre</span><input type="number" id="set-stocks" min="1" max="8" value="${st.stocks}"></label>
       </div>
+      <p class="small muted">Jeder Schütze hat einen Stock. Gilt für alle Mannschaften gleich – bei größeren Teams wird durchgewechselt.</p>
       <h3>Teilnehmer &amp; Selbst-Eintragen</h3>
       <label class="check"><input type="checkbox" id="set-reg" ${st.registrationOpen ? 'checked' : ''}> Registrierung offen</label>
       <label class="check"><input type="checkbox" id="set-self" ${st.selfEntry ? 'checked' : ''}> Teilnehmer dürfen eigene Liter eintragen</label>
@@ -629,7 +629,8 @@
       <div class="card">
         <h4>🥌 Ein Spiel</h4>
         <p>Zwei Mannschaften spielen gegeneinander, ein Spiel hat <b>${st.kehren} Kehren</b> (Durchgänge).
-          Pro Kehre schießt jede Mannschaft ihre ${st.stocks} Stöcke Richtung Daube (Zielwürfel).</p>
+          Pro Kehre schießen von jeder Mannschaft <b>${st.stocks} Spieler</b> je einen Stock Richtung Daube (Zielwürfel).
+          Hat ein Team mehr Leute, wird durchgewechselt.</p>
         <h4>📏 Punkte pro Kehre</h4>
         <p>Nur die Mannschaft, deren Stock <b>am nächsten an der Daube</b> liegt, bekommt Punkte:</p>
         <ul><li>bester Stock: <b>3 Punkte</b></li>
@@ -692,13 +693,6 @@
     },
 
     'drink': (el) => addDrink(el.dataset.p, Number(el.dataset.l)),
-    'drink-custom': (el) => {
-      const v = prompt('Menge in Litern (z. B. 0,25):', '0,25');
-      if (v == null) return;
-      const l = Number(String(v).replace(',', '.'));
-      if (!(l > 0 && l <= 5)) { toast('Ungültige Menge', { error: true }); return; }
-      addDrink(el.dataset.p, Math.round(l * 100) / 100);
-    },
     'drink-del': (el) => write((secret) => S.api.deleteDrink(secret, el.dataset.id)),
 
     'logout': () => { setAuth(null); toast('Abgemeldet'); render(); },

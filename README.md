@@ -16,7 +16,7 @@ Alle Handys sehen dieselben Daten, live (Aktualisierung alle 4 Sekunden).
 Alle Rechte werden **in der Datenbank** geprüft, nicht nur in der App. Wer die Seite manipuliert, kommt trotzdem nicht weiter.
 
 **Regeln fürs Selbst-Eintragen** (vom Admin im Setup einstellbar):
-- höchstens **1 l pro Eintrag**
+- Getränke: **0,33 l** (Flasche) oder **0,5 l** (Halbe), höchstens 0,5 l pro Eintrag
 - mindestens **10 Minuten** zwischen zwei Einträgen. Auch Einträge der Bar zählen, damit nichts doppelt eingetragen wird.
 - maximal **1,5 l pro Stunde** (gleitend über 60 Minuten)
 - Rückgängig nur für **eigene Einträge der letzten 5 Minuten**, alles andere korrigiert die Bar
@@ -34,7 +34,7 @@ Alle Rechte werden **in der Datenbank** geprüft, nicht nur in der App. Wer die 
 | **Kehre** | Nur die Mannschaft mit dem Stock **am nächsten an der Daube** punktet: **3 Punkte** für diesen Stock, **+2** für jeden weiteren eigenen Stock, der näher liegt als der beste gegnerische (1/2/3/4 Stöcke = 3/5/7/9 Punkte). |
 | **Spiel** | 6 Kehren (einstellbar). Die Stockpunkte werden addiert: **Sieg 2**, **Unentschieden 1**, **Niederlage 0** Spielpunkte. |
 | **Sportwertung** | 1. Spielpunkte → 2. **Stocknote** (erzielte ÷ erhaltene Stockpunkte, wie bei offiziellen Turnieren) → 3. Differenz → 4. erzielte Stockpunkte |
-| **Literwertung** | Getränke per Knopf (+0,3 / +0,5 / +1,0 l oder eigene Menge) pro Person. Mannschaften nach Gesamtlitern, bei Gleichstand nach Ø pro Kopf. Dazu eine Einzelwertung. |
+| **Literwertung** | Getränke per Knopf (+0,33 l oder +0,5 l) pro Person. Mannschaften nach Gesamtlitern, bei Gleichstand nach Ø pro Kopf. Dazu eine Einzelwertung. |
 | **Gesamtwertung** | Platz Sport + Platz Liter. Die kleinste Summe gewinnt, bei Gleichstand der bessere Sportplatz. |
 
 Am Handy wird pro Kehre nur getippt: *welche Mannschaft* → *wie viele Stöcke*. Die Punkte rechnet die App.
