@@ -229,3 +229,15 @@ label.check input { width: 22px; height: 22px; }
 .person.me .who b::after { content: " (du)"; font-weight: 400; color: var(--muted); }
 details.card > summary { cursor: pointer; }
 code { font-size: 13px; background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+
+/* Trink-Erinnerung */
+.modal .card.reminder { text-align: center; animation: pop .25s ease-out; }
+.reminder .big-emoji { font-size: 56px; line-height: 1; margin-top: 4px; }
+.reminder h2 { margin: 8px 0 4px; }
+.reminder .row { margin: 12px 0 8px; }
+.reminder .btn.block { margin-top: 6px; }
+.linkbtn { background: none; border: 0; color: var(--muted, #6b7a86); text-decoration: underline; cursor: pointer; padding: 10px 4px 2px; font: inherit; }
+.startline, .remindbox { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.startline p, .remindbox p { margin: 4px 0 8px; }
+@keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .modal .card.reminder { animation: none; } }

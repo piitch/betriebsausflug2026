@@ -29,6 +29,10 @@ alter table settings add column if not exists self_entry boolean not null defaul
 alter table settings add column if not exists user_min_gap int not null default 10;
 alter table settings add column if not exists user_max_per_hour numeric(4, 2) not null default 1.5;
 alter table settings add column if not exists user_max_entry numeric(4, 2) not null default 0.5;
+-- Trink-Erinnerung: alle X Minuten ab Spielbeginn (0 = aus). Spielbeginn setzt der Admin
+-- oder automatisch die erste eingetragene Kehre.
+alter table settings add column if not exists reminder_minutes int not null default 0;
+alter table settings add column if not exists started_at timestamptz;
 insert into settings (id) values (1) on conflict do nothing;
 
 create table if not exists secrets (id int primary key default 1 check (id = 1));
@@ -218,7 +222,10 @@ begin
     self_entry = coalesce((p_settings->>'self_entry')::boolean, self_entry),
     user_min_gap = greatest(0, coalesce((p_settings->>'user_min_gap')::int, user_min_gap)),
     user_max_per_hour = coalesce((p_settings->>'user_max_per_hour')::numeric, user_max_per_hour),
-    user_max_entry = coalesce((p_settings->>'user_max_entry')::numeric, user_max_entry)
+    user_max_entry = coalesce((p_settings->>'user_max_entry')::numeric, user_max_entry),
+    reminder_minutes = greatest(0, least(240, coalesce((p_settings->>'reminder_minutes')::int, reminder_minutes))),
+    -- "start": true = Spielbeginn jetzt, false = Spielbeginn zurücksetzen
+    started_at = case (p_settings->>'start')::boolean when true then now() when false then null else started_at end
   where id = 1;
 end $$;
 
@@ -297,6 +304,10 @@ returns void language plpgsql security definer set search_path = public as $$
 begin
   perform _require(p_secret, array['admin']);
   update games set kehren = p_kehren, done = p_done, updated_at = now() where id = p_id;
+  -- Die erste gewertete Kehre ist der Spielbeginn (falls der Admin ihn nicht schon gesetzt hat)
+  if exists (select 1 from jsonb_array_elements(p_kehren) k where k->>'team' is not null) then
+    update settings set started_at = now() where id = 1 and started_at is null;
+  end if;
 end $$;
 
 create or replace function delete_game(p_secret text, p_id uuid)
@@ -371,6 +382,7 @@ begin
   perform _require(p_secret, array['admin']);
   delete from drinks where true;
   delete from games where true;
+  update settings set started_at = null where id = 1;
   if p_mode = 'all' then
     delete from players where true;
     delete from teams where true;

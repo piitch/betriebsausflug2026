@@ -1,10 +1,10 @@
 (function () {
   'use strict';
 
-  const { scoring, schedule, backend: B } = window.Eisstock;
+  const { scoring, schedule, backend: B, reminder } = window.Eisstock;
   const POLL_MS = 4000;
   const UNDO_MINUTES = 5; // muss zu delete_drink in supabase/setup.sql passen
-  const LS = { auth: 'eisstock.auth', conn: 'eisstock.connection', local: 'eisstock.localdata', rank: 'eisstock.ranktab' };
+  const LS = { auth: 'eisstock.auth', conn: 'eisstock.connection', local: 'eisstock.localdata', rank: 'eisstock.ranktab', remind: 'eisstock.reminder', remindOff: 'eisstock.reminderoff' };
   const COLORS = ['#d33a2c', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#17becf', '#e377c2', '#8c564b', '#bcbd22', '#7f7f7f'];
   const DRINKS = [0.33, 0.5]; // Flaschen bzw. Halbe – mehr gibt es nicht
   const SOURCE = { user: '👤', bar: '🍺', admin: '⚙️' };
@@ -455,6 +455,90 @@
     });
   }
 
+  // ------------------------------------------------------------ Trink-Erinnerung
+
+  // Die Bar muss nicht ans Trinken erinnert werden.
+  const reminderWanted = () => role() !== 'bar' && lsGet(LS.remindOff) !== '1';
+  const canNotify = () => 'Notification' in window && 'serviceWorker' in navigator && window.isSecureContext;
+
+  function nextReminderText() {
+    const st = S.data.settings;
+    const d = reminder.due(st.startedAt, st.reminderMinutes, Date.now(), 0);
+    return d ? `um ${fmtTime(new Date(d.nextAt).toISOString())} Uhr` : `${reminder.fmtDuration(st.reminderMinutes)} nach Spielbeginn`;
+  }
+
+  // Wird regelmäßig aufgerufen: zeigt die fällige Erinnerung genau einmal pro Gerät.
+  function checkReminder() {
+    const st = S.data.settings;
+    if (!S.loaded || !reminder.active(S.data)) return;
+    let seen = {};
+    try { seen = JSON.parse(lsGet(LS.remind)) || {}; } catch (e) { /* neu anfangen */ }
+    const last = seen.start === st.startedAt ? seen.index : 0; // neuer Spielbeginn = neue Zählung
+    const d = reminder.due(st.startedAt, st.reminderMinutes, Date.now(), last);
+    if (!d || d.index <= last) return;
+    if (d.show && reminderWanted()) {
+      // Im Hintergrund geht nur eine Handy-Benachrichtigung; ohne Erlaubnis warten, bis die App wieder offen ist.
+      if (document.hidden && !(canNotify() && Notification.permission === 'granted')) return;
+      showReminder(d);
+    }
+    lsSet(LS.remind, JSON.stringify({ start: st.startedAt, index: d.index }));
+  }
+
+  function showReminder(d, test) {
+    const title = '🍺 Trinkpause!';
+    const body = `Seit Spielbeginn sind ${reminder.fmtDuration(d.minutesSinceStart)} vergangen. Zeit für ein Getränk – oder ein Wasser 💧`;
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (canNotify() && Notification.permission === 'granted' && (document.hidden || test)) {
+      navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, {
+        body, tag: 'trinkpause', renotify: true, icon: 'icon.svg', badge: 'icon.svg', vibrate: [200, 100, 200],
+      })).catch(() => {});
+      if (document.hidden) return;
+    }
+    const me = myId() ? selfEntryState() : null;
+    const sizes = DRINKS.filter((l) => l <= S.data.settings.userMaxEntry);
+    const m = $('#modal');
+    m.innerHTML = `<div class="card reminder" role="dialog" aria-modal="true" aria-labelledby="remind-title">
+      <div class="big-emoji">🍻</div>
+      <h2 id="remind-title">Trinkpause!</h2>
+      <p>${esc(body)}</p>
+      ${me && !me.blocked ? `<div class="row">${sizes.map((l) =>
+        `<button class="btn grow" data-act="remind-drink" data-p="${esc(myId())}" data-l="${l}">+${fmtL(l)} l</button>`).join('')}</div>` : ''}
+      ${me && me.blocked ? `<p class="small muted">${esc(me.blocked)}</p>` : ''}
+      <button class="btn primary block" data-act="remind-close">Prost! 🍺</button>
+      <button class="linkbtn small" data-act="remind-off">Auf diesem Handy nicht mehr erinnern</button>
+    </div>`;
+    m.hidden = false;
+  }
+
+  function closeReminder() {
+    const m = $('#modal');
+    m.hidden = true;
+    m.innerHTML = '';
+  }
+
+  // Einstellungen für dieses Handy (Konto-Seite und Setup).
+  function reminderDeviceCard(inline) {
+    const st = S.data.settings;
+    if (role() === 'bar' || !st.reminderMinutes) return '';
+    const on = lsGet(LS.remindOff) !== '1';
+    let notify = '';
+    if (on && canNotify()) {
+      notify = Notification.permission === 'granted'
+        ? '<p class="small muted">✅ Benachrichtigungen erlaubt: Die Erinnerung kommt auch, wenn die App im Hintergrund offen ist.</p>'
+        : Notification.permission === 'denied'
+          ? '<p class="small muted">Benachrichtigungen sind für diese Seite blockiert. Die Erinnerung kommt nur als Pop-up, solange die App offen ist.</p>'
+          : '<button class="btn sm" data-act="notify-allow">🔔 Auch als Handy-Benachrichtigung</button>';
+    } else if (on) {
+      notify = '<p class="small muted">Tipp fürs iPhone: Die Seite über <i>Teilen → Zum Home-Bildschirm</i> als App speichern, dann sind auch Benachrichtigungen möglich.</p>';
+    }
+    const inner = `<p>🔔 Trink-Erinnerung alle <b>${reminder.fmtDuration(st.reminderMinutes)}</b> ab Spielbeginn${
+      reminder.active(S.data) ? `, nächste ${nextReminderText()}` : st.startedAt ? ' (Turnier beendet)' : ' (Spielbeginn steht noch aus)'}.</p>
+      <label class="check"><input type="checkbox" data-act-change="remind-toggle" ${on ? 'checked' : ''}> Auf diesem Handy erinnern</label>
+      ${notify}
+      ${on ? '<button class="btn sm" data-act="notify-test">Test-Erinnerung zeigen</button>' : ''}`;
+    return inline ? `<div class="remindbox">${inner}</div>` : `<div class="card">${inner}</div>`;
+  }
+
   // ------------------------------------------------------------ Konto / Setup
 
   function viewKonto() {
@@ -477,7 +561,7 @@
           Eigene Einträge lassen sich ${UNDO_MINUTES} Min. lang zurücknehmen; alles andere korrigiert die Bar.</p>
         <button class="btn danger" data-act="logout-user">Abmelden</button>
         <p class="small muted">Achtung: Nach dem Abmelden kann nur der Admin dein Konto wieder freigeben.</p></div>`;
-      return html + loginCard(true);
+      return html + reminderDeviceCard() + loginCard(true);
     }
 
     const st = S.data.settings;
@@ -500,7 +584,7 @@
     } else {
       html += '<div class="card"><p>Die Registrierung ist gerade geschlossen. Bitte an den Admin wenden.</p></div>';
     }
-    return html + loginCard(false);
+    return html + reminderDeviceCard() + loginCard(false);
   }
 
   function loginCard(collapsed) {
@@ -549,7 +633,17 @@
         <label class="field grow"><span>Max. Liter / Eintrag</span><input type="number" id="set-entry" min="0.1" max="5" step="0.1" value="${st.userMaxEntry}"></label>
       </div>
       <p class="small muted">Gilt nur für Teilnehmer. Bar und Admin haben keine Limits. Auch Einträge der Bar zählen für den Mindestabstand.</p>
-      <button class="btn primary" data-act="settings-save">Speichern</button></div>`;
+      <h3>🔔 Trink-Erinnerung</h3>
+      <label class="field"><span>Erinnerung alle … Minuten ab Spielbeginn (0 = aus)</span>
+        <input type="number" id="set-remind" min="0" max="240" step="5" value="${st.reminderMinutes}"></label>
+      <p class="small muted">Alle Handys außer der Bar zeigen dann ein Pop-up. Läuft bis das letzte Spiel beendet ist.</p>
+      <button class="btn primary" data-act="settings-save">Speichern</button>
+      <div class="startline">${st.startedAt
+        ? `<p>▶ Spielbeginn: <b>${fmtTime(st.startedAt)} Uhr</b>${reminder.active(S.data) ? ` · nächste Erinnerung ${nextReminderText()}` : ''}</p>
+          <button class="btn sm" data-act="start-reset">Spielbeginn zurücksetzen</button>`
+        : `<p class="small muted">Spielbeginn ist noch nicht gesetzt. Er wird automatisch mit der ersten eingetragenen Kehre gesetzt.</p>
+          <button class="btn sm" data-act="start-now">▶ Spielbeginn jetzt</button>`}</div>
+      ${reminderDeviceCard(true)}</div>`;
 
     html += `<h3>Mannschaften (${S.data.teams.length})</h3><div class="card">
       ${S.data.teams.map((t) => `<div class="member" data-team="${t.id}">
@@ -660,6 +754,7 @@
           <li>maximal <b>${fmtNum(st.userMaxPerHour)} l pro Stunde</b></li>
           <li>Rückgängig nur für eigene Einträge der letzten ${UNDO_MINUTES} Minuten</li></ul>
         <p>Die <b>Bar</b> kann für alle eintragen und korrigieren. Bei jedem Eintrag steht, wer ihn gemacht hat.</p>
+        ${st.reminderMinutes ? `<p>🔔 Ab Spielbeginn erinnert die App alle <b>${reminder.fmtDuration(st.reminderMinutes)}</b> ans Trinken.</p>` : ''}
         <p>Mannschaften werden nach <b>Gesamtlitern</b> gereiht (Ø pro Kopf steht daneben), dazu gibt es eine Einzelwertung.</p>
         <h4>⭐ Gesamtwertung</h4>
         <p>Platz in der Sportwertung + Platz in der Literwertung. <b>Die kleinste Summe gewinnt</b>,
@@ -696,6 +791,18 @@
     },
 
     'drink': (el) => addDrink(el.dataset.p, Number(el.dataset.l)),
+    'start-now': () => write((secret) => S.api.saveSettings(secret, { start: true })).then((ok) => ok && toast('Spielbeginn gesetzt ✓')),
+    'start-reset': () => confirm('Spielbeginn zurücksetzen? Die Trink-Erinnerungen pausieren, bis er neu gesetzt wird.') &&
+      write((secret) => S.api.saveSettings(secret, { start: false })),
+    'remind-close': () => closeReminder(),
+    'remind-drink': (el) => { closeReminder(); addDrink(el.dataset.p, Number(el.dataset.l)); },
+    'remind-off': () => { lsSet(LS.remindOff, '1'); closeReminder(); toast('Erinnerungen auf diesem Handy aus'); render(); },
+    'notify-allow': async () => {
+      const p = await Notification.requestPermission();
+      toast(p === 'granted' ? 'Benachrichtigungen erlaubt 🔔' : 'Benachrichtigungen nicht erlaubt', { error: p !== 'granted' });
+      render();
+    },
+    'notify-test': () => showReminder({ minutesSinceStart: S.data.settings.reminderMinutes || 30 }, true),
     'drink-del': (el) => write((secret) => S.api.deleteDrink(secret, el.dataset.id)),
 
     'logout': () => { setAuth(null); toast('Abgemeldet'); render(); },
@@ -715,6 +822,7 @@
         userMinGap: Math.round(num('#set-gap', 10, 0, 120)),
         userMaxPerHour: Math.round(num('#set-hour', 1.5, 0.1, 5) * 100) / 100,
         userMaxEntry: Math.round(num('#set-entry', 1, 0.1, 5) * 100) / 100,
+        reminderMinutes: Math.round(num('#set-remind', 0, 0, 240)),
       };
       document.activeElement.blur();
       write((secret) => S.api.saveSettings(secret, s)).then((ok) => ok && toast('Gespeichert ✓'));
@@ -779,6 +887,12 @@
 
   // Änderungen an Eingabefeldern (Speichern beim Verlassen des Feldes)
   const changeActions = {
+    'remind-toggle': (el) => {
+      lsSet(LS.remindOff, el.checked ? null : '1');
+      toast(el.checked ? 'Erinnerungen auf diesem Handy an 🔔' : 'Erinnerungen auf diesem Handy aus');
+      el.blur();
+      render();
+    },
     'team-rename': (el) => {
       const name = el.value.trim();
       if (!name) { render(); return; }
@@ -898,11 +1012,13 @@
   });
 
   window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh().then(checkReminder); });
 
   initApi();
+  if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   render();
-  refresh(true).then(verifyAuth);
+  refresh(true).then(verifyAuth).then(checkReminder);
+  setInterval(checkReminder, 15000);
   setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);
   // Wartezeit-Anzeige für Teilnehmer aktuell halten
   setInterval(() => { if (!document.hidden && myId() && route().view === 'liter') render(); }, 20000);

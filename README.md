@@ -23,6 +23,14 @@ Alle Rechte werden **in der Datenbank** geprüft, nicht nur in der App. Wer die 
 - Der Admin kann das Selbst-Eintragen jederzeit **sperren** und die Registrierung **schließen**.
 - Bei jedem Eintrag steht, wer ihn gemacht hat: 👤 selbst, 🍺 Bar, ⚙️ Admin.
 
+**🔔 Trink-Erinnerung:** Im Setup stellt der Admin ein, alle wie viele Minuten ab **Spielbeginn** erinnert wird (0 = aus).
+Der Spielbeginn wird automatisch mit der ersten eingetragenen Kehre gesetzt, oder der Admin tippt auf **▶ Spielbeginn jetzt**.
+Dann zeigt jedes Handy (außer der Bar) ein Pop-up, Teilnehmer können direkt daraus +0,33 l oder +0,5 l eintragen.
+Nach dem letzten beendeten Spiel ist Schluss. Unter **Ich/Anmelden** lässt sich die Erinnerung pro Handy abschalten
+oder zusätzlich als **Handy-Benachrichtigung** erlauben. Wichtig: Die App muss dafür offen sein (auch im Hintergrund);
+ganz geschlossen kann eine Webseite nicht erinnern. Am iPhone gehen Benachrichtigungen nur, wenn die Seite über
+*Teilen → Zum Home-Bildschirm* gespeichert wurde.
+
 **Registrierung:** Teilnehmer wählen eine der vom Admin angelegten Mannschaften und dann ihren Namen aus der Liste. Wer nicht in der Liste steht, trägt seinen Namen ein. Ein bereits registrierter Name ist für andere gesperrt.
 **Neues Handy oder versehentlich abgemeldet?** Der Admin tippt bei der Person auf ↺ (Login zurücksetzen), danach kann sie sich neu registrieren. Ihre Liter bleiben erhalten.
 
@@ -53,6 +61,8 @@ Am Handy wird pro Kehre nur getippt: *welche Mannschaft* → *wie viele Stöcke*
    - **Project URL**, z. B. `https://abcdefgh.supabase.co`
    - **Publishable key** bzw. **anon public key**. Dieser Schlüssel darf öffentlich sein, weil Schreiben nur mit PIN geht.
 
+> **Update für die Trink-Erinnerung:** Wer die Datenbank schon eingerichtet hat, führt nur [`supabase/update-erinnerung.sql`](supabase/update-erinnerung.sql) im SQL Editor aus. Die Codes bleiben dabei unverändert.
+
 > Codes später ändern oder auf eine neue Version aktualisieren: `setup.sql` (mit euren Codes) erneut ausführen. Vorhandene Daten bleiben erhalten.
 > **Wichtig:** Die eigenen Codes nicht ins Repository committen, es ist öffentlich.
 
@@ -70,7 +80,7 @@ Am Handy wird pro Kehre nur getippt: *welche Mannschaft* → *wie viele Stöcke*
 ### 3. Am Tag selbst
 
 1. Link (am besten als QR-Code) an alle verteilen. Am Handy über *Teilen → Zum Home-Bildschirm* wie eine App nutzen.
-2. Admin: **Anmelden** → Admin-Code → Mannschaften und (optional) Personen anlegen → **Spielplan erstellen**.
+2. Admin: **Anmelden** → Admin-Code → Mannschaften und (optional) Personen anlegen → **Spielplan erstellen**. Im Setup das Intervall der Trink-Erinnerung einstellen.
 3. Teilnehmer: **Anmelden** → Teilnehmer-Code → Mannschaft und Namen wählen → unter **Liter** selbst eintragen.
 4. Bar: **Anmelden** → Bar-Code → unter **Liter** für alle eintragen oder korrigieren.
 5. Der Admin trägt die Kehren ein → **Spiel beenden & werten**.
@@ -96,7 +106,10 @@ Aufbau: reines HTML/CSS/JS ohne Build-Schritt.
 |---|---|
 | `public/js/scoring.js` | Wertung (Kehren, Sport, Liter, Gesamt) |
 | `public/js/schedule.js` | Spielplan Jeder gegen Jeden |
+| `public/js/reminder.js` | Trink-Erinnerung (wann ist die nächste fällig?) |
+| `public/sw.js` | Service Worker für Handy-Benachrichtigungen |
 | `public/js/backend.js` | Datenzugriff (Supabase-REST oder lokal) |
 | `public/js/app.js` | Oberfläche |
 | `supabase/setup.sql` | Tabellen, Leserechte, PIN-geschützte Schreibfunktionen |
+| `supabase/update-erinnerung.sql` | Update einer bestehenden Datenbank für die Trink-Erinnerung |
 | `.github/workflows/pages.yml` | Tests + Deployment auf GitHub Pages |

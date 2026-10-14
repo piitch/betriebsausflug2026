@@ -7,6 +7,7 @@
   const DEFAULT_SETTINGS = {
     title: 'Eurofun Touristik Betriebsausflug 2026', kehren: 6, stocks: 4,
     registrationOpen: true, selfEntry: true, userMinGap: 10, userMaxPerHour: 1.5, userMaxEntry: 0.5,
+    reminderMinutes: 0, startedAt: null,
   };
 
   function uuid() {
@@ -54,6 +55,8 @@
             userMinGap: Number(s.user_min_gap ?? DEFAULT_SETTINGS.userMinGap),
             userMaxPerHour: Number(s.user_max_per_hour ?? DEFAULT_SETTINGS.userMaxPerHour),
             userMaxEntry: Number(s.user_max_entry ?? DEFAULT_SETTINGS.userMaxEntry),
+            reminderMinutes: Number(s.reminder_minutes ?? 0),
+            startedAt: s.started_at ?? null,
           },
           teams,
           players: players.map((p) => ({ id: p.id, name: p.name, teamId: p.team_id, registered: p.registered })),
@@ -77,6 +80,7 @@
           title: s.title, kehren: s.kehren, stocks: s.stocks,
           registration_open: s.registrationOpen, self_entry: s.selfEntry,
           user_min_gap: s.userMinGap, user_max_per_hour: s.userMaxPerHour, user_max_entry: s.userMaxEntry,
+          reminder_minutes: s.reminderMinutes, start: s.start,
         },
       }),
       saveTeam: (secret, t) => rpc('save_team', { p_secret: secret, p_id: t.id || null, p_name: t.name }),
@@ -126,7 +130,10 @@
       load: () => Promise.resolve(read()),
       login: () => Promise.resolve({ role: 'admin', playerId: null }),
       register: () => Promise.reject(new Error('Im lokalen Modus gibt es keine Registrierung.')),
-      saveSettings: (secret, settings) => write((s) => { s.settings = { ...s.settings, ...settings }; }),
+      saveSettings: (secret, { start, ...settings }) => write((s) => {
+        s.settings = { ...s.settings, ...settings };
+        if (start !== undefined) s.settings.startedAt = start ? new Date().toISOString() : null;
+      }),
       saveTeam: (secret, t) => write((s) => {
         const existing = s.teams.find((x) => x.id === t.id);
         if (existing) existing.name = t.name;
@@ -157,6 +164,7 @@
       saveGame: (secret, g) => write((s) => {
         const game = s.games.find((x) => x.id === g.id);
         if (game) Object.assign(game, { kehren: g.kehren, done: g.done });
+        if (!s.settings.startedAt && g.kehren.some((k) => k && k.team)) s.settings.startedAt = new Date().toISOString();
       }),
       deleteGame: (secret, id) => write((s) => { s.games = s.games.filter((g) => g.id !== id); }),
       addDrink: (secret, personId, liters) => write((s) => {
@@ -168,6 +176,7 @@
       reset: (secret, mode) => write((s) => {
         s.drinks = [];
         s.games = [];
+        s.settings.startedAt = null;
         if (mode === 'all') { s.teams = []; s.players = []; }
       }),
     };
